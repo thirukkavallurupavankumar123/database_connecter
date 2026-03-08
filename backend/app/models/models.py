@@ -11,6 +11,7 @@ class Organization(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String(255), nullable=False)
+    password_hash = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     users = relationship("User", back_populates="organization", cascade="all, delete-orphan")
@@ -23,6 +24,7 @@ class User(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     email = Column(String(255), unique=True, nullable=False)
     name = Column(String(255), nullable=False)
+    password_hash = Column(String(255), nullable=False)
     organization_id = Column(String, ForeignKey("organizations.id"), nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)

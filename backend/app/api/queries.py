@@ -6,8 +6,11 @@ from sqlalchemy.orm import Session
 import io
 
 from app.database import get_db
-from app.models.models import DatabaseConnection, QueryHistory, SchemaCache, User
-from app.schemas.schemas import QueryRequest, QueryResponse, ReportRequest, QueryHistoryResponse
+from app.models.models import DatabaseConnection, QueryHistory, SchemaCache, User, Organization
+from app.schemas.schemas import (
+    QueryRequest, QueryResponse, ReportRequest, QueryHistoryResponse,
+    ConnectRequest, ConnectResponse,
+)
 from app.services.database_connector import get_client_engine
 from app.services.schema_extractor import schema_to_prompt_context
 from app.services.sql_validator import validate_sql, SQLValidationError
@@ -18,6 +21,31 @@ from app.agents.query_agent import generate_sql
 from app.agents.analysis_agent import analyze_data
 
 router = APIRouter(prefix="/api/query", tags=["Query & Analysis"])
+
+
+@router.post("/connect", response_model=ConnectResponse)
+def connect_session(payload: ConnectRequest, db: Session = Depends(get_db)):
+    """Validate user and return their available database connections."""
+    user = db.query(User).filter(User.id == payload.user_id).first()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=404, detail="Active user not found")
+
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    connections = db.query(DatabaseConnection).filter(
+        DatabaseConnection.organization_id == user.organization_id,
+        DatabaseConnection.is_active == True,
+    ).all()
+
+    return ConnectResponse(
+        user_id=user.id,
+        user_name=user.name,
+        organization_id=org.id,
+        organization_name=org.name,
+        connections=connections,
+    )
 
 
 @router.post("/", response_model=QueryResponse)

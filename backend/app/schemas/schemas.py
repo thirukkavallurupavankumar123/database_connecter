@@ -6,6 +6,7 @@ from datetime import datetime
 # --- Organization ---
 class OrganizationCreate(BaseModel):
     name: str
+    password: str
 
 
 class OrganizationResponse(BaseModel):
@@ -21,6 +22,7 @@ class UserCreate(BaseModel):
     email: str
     name: str
     organization_id: str
+    password: str
 
 
 class UserResponse(BaseModel):
@@ -34,9 +36,33 @@ class UserResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# --- Auth ---
+class SignupRequest(BaseModel):
+    email: str
+    name: str
+    password: str
+    organization_name: Optional[str] = None       # create new org
+    organization_password: Optional[str] = None   # org password (required for both create & join)
+    organization_id: Optional[str] = None          # join existing org
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class AuthResponse(BaseModel):
+    user_id: str
+    user_name: str
+    email: str
+    organization_id: str
+    organization_name: str
+
+
 # --- Database Connection ---
 class DatabaseConnectionCreate(BaseModel):
     organization_id: str
+    user_id: str
     name: str
     db_type: Literal["postgresql", "mysql", "sqlserver"]
     host: str
@@ -72,6 +98,29 @@ class DatabaseConnectionTest(BaseModel):
     username: str
     password: str
     ssl_enabled: bool = True
+
+
+# --- Connect Session ---
+class ConnectRequest(BaseModel):
+    user_id: str
+
+
+class ConnectionInfo(BaseModel):
+    id: str
+    name: str
+    db_type: str
+    host: str
+    database_name: str
+
+    model_config = {"from_attributes": True}
+
+
+class ConnectResponse(BaseModel):
+    user_id: str
+    user_name: str
+    organization_id: str
+    organization_name: str
+    connections: list[ConnectionInfo]
 
 
 # --- Query ---

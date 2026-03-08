@@ -1,12 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { getQueryHistory } from "@/lib/api";
+import AuthGuard from "@/components/AuthGuard";
 
 export default function HistoryPage() {
+  return (
+    <AuthGuard>
+      <HistoryContent />
+    </AuthGuard>
+  );
+}
+
+function HistoryContent() {
   const [userId, setUserId] = useState("");
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Auto-fill user ID and auto-load history
+  useEffect(() => {
+    const saved = localStorage.getItem("argo_user_id");
+    if (saved) {
+      setUserId(saved);
+      getQueryHistory(saved).then((res) => setHistory(res.data)).catch(() => {});
+    }
+  }, []);
 
   const handleLoad = async () => {
     if (!userId) return;

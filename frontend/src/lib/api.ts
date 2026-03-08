@@ -7,6 +7,22 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+// --- Auth ---
+export const signup = (data: {
+  email: string;
+  name: string;
+  password: string;
+  organization_name?: string;
+  organization_password?: string;
+  organization_id?: string;
+}) => api.post("/api/auth/signup", data);
+
+export const login = (data: { email: string; password: string }) =>
+  api.post("/api/auth/login", data);
+
+export const getMe = (userId: string) =>
+  api.get(`/api/auth/me/${userId}`);
+
 // --- Organizations ---
 export const createOrganization = (name: string) =>
   api.post("/api/organizations/", { name });
@@ -33,6 +49,7 @@ export const testConnection = (data: {
 
 export const createConnection = (data: {
   organization_id: string;
+  user_id: string;
   name: string;
   db_type: string;
   host: string;
@@ -43,16 +60,25 @@ export const createConnection = (data: {
   ssl_enabled?: boolean;
 }) => api.post("/api/connections/", data);
 
-export const listConnections = (orgId: string) =>
-  api.get(`/api/connections/org/${orgId}`);
+export const listConnections = (orgId: string) => {
+  const userId = localStorage.getItem("argo_user_id") || "";
+  return api.get(`/api/connections/org/${orgId}?user_id=${userId}`);
+};
 
-export const getSchema = (connId: string) =>
-  api.get(`/api/connections/${connId}/schema`);
+export const getSchema = (connId: string) => {
+  const userId = localStorage.getItem("argo_user_id") || "";
+  return api.get(`/api/connections/${connId}/schema?user_id=${userId}`);
+};
 
-export const deleteConnection = (connId: string) =>
-  api.delete(`/api/connections/${connId}`);
+export const deleteConnection = (connId: string) => {
+  const userId = localStorage.getItem("argo_user_id") || "";
+  return api.delete(`/api/connections/${connId}?user_id=${userId}`);
+};
 
 // --- Queries ---
+export const connectSession = (userId: string) =>
+  api.post("/api/query/connect", { user_id: userId });
+
 export const runQuery = (data: {
   connection_id: string;
   user_id: string;

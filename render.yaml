@@ -1,0 +1,42 @@
+# ═══════════════════════════════════════════════
+# ARGO Analytics — Render.com Deployment Config
+# Push to GitHub, then connect repo on render.com
+# ═══════════════════════════════════════════════
+# PostgreSQL already created on Render:
+#   Instance: dpg-d6mkttbh46gs73boom30-a
+#   Database: dataanalys
+#   User: dataanalys_user
+# ═══════════════════════════════════════════════
+
+services:
+  # FastAPI Backend
+  - type: web
+    name: argo-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false  # Set in Render dashboard → Internal DB URL
+      - key: GROQ_API_KEY
+        sync: false  # Set manually in Render dashboard
+      - key: ENCRYPTION_KEY
+        sync: false  # Set manually in Render dashboard
+      - key: FRONTEND_URL
+        value: https://argo-frontend.onrender.com
+      - key: DEBUG
+        value: "false"
+
+  # Next.js Frontend
+  - type: web
+    name: argo-frontend
+    runtime: node
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://argo-backend.onrender.com

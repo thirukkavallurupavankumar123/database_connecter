@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+import bcrypt
 from app.database import get_db
 from app.models.models import Organization, User
 from app.schemas.schemas import (
@@ -12,7 +13,12 @@ router = APIRouter(prefix="/api/organizations", tags=["Organizations"])
 
 @router.post("/", response_model=OrganizationResponse)
 def create_organization(payload: OrganizationCreate, db: Session = Depends(get_db)):
-    org = Organization(name=payload.name)
+    if not payload.password or len(payload.password) < 4:
+        raise HTTPException(status_code=400, detail="Organization password must be at least 4 characters")
+    org = Organization(
+        name=payload.name,
+        password_hash=bcrypt.hashpw(payload.password.encode(), bcrypt.gensalt()).decode(),
+    )
     db.add(org)
     db.commit()
     db.refresh(org)
@@ -39,7 +45,12 @@ def create_user(org_id: str, payload: UserCreate, db: Session = Depends(get_db))
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
 
-    user = User(email=payload.email, name=payload.name, organization_id=org_id)
+    user = User(
+        email=payload.email,
+        name=payload.name,
+        password_hash=bcrypt.hashpw(payload.password.encode(), bcrypt.gensalt()).decode(),
+        organization_id=org_id,
+    )
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -47,5 +58,10 @@ def create_user(org_id: str, payload: UserCreate, db: Session = Depends(get_db))
 
 
 @router.get("/{org_id}/users", response_model=list[UserResponse])
-def list_users(org_id: str, db: Session = Depends(get_db)):
+def list_users(org_id: str, user_id: str = None, db: Session = Depends(get_db)):
+    # If user_id provided, verify they belong to this org
+    if user_id:
+        user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
+        if not user or user.organization_id != org_id:
+            raise HTTPException(status_code=403, detail="Access denied")
     return db.query(User).filter(User.organization_id == org_id).all()

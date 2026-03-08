@@ -1,4 +1,16 @@
+"use client";
+
+import AuthGuard from "@/components/AuthGuard";
+
 export default function DashboardPage() {
+  return (
+    <AuthGuard>
+      <DashboardContent />
+    </AuthGuard>
+  );
+}
+
+function DashboardContent() {
   return (
     <div className="space-y-8">
       {/* Hero */}

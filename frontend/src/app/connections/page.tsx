@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ChangeEvent } from "react";
 import { testConnection, createConnection, listConnections, deleteConnection } from "@/lib/api";
+import AuthGuard from "@/components/AuthGuard";
 
 type ConnectionFormState = {
   name: string;
@@ -31,6 +32,14 @@ const DB_TYPES = [
 ];
 
 export default function ConnectionsPage() {
+  return (
+    <AuthGuard>
+      <ConnectionsContent />
+    </AuthGuard>
+  );
+}
+
+function ConnectionsContent() {
   const [form, setForm] = useState<ConnectionFormState>({
     name: "",
     db_type: "postgresql",
@@ -46,6 +55,15 @@ export default function ConnectionsPage() {
   const [connections, setConnections] = useState<SavedConnection[]>([]);
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Auto-fill org ID from localStorage and auto-load connections
+  useEffect(() => {
+    const saved = localStorage.getItem("argo_org_id");
+    if (saved) {
+      setOrgId(saved);
+      listConnections(saved).then((res) => setConnections(res.data)).catch(() => {});
+    }
+  }, []);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -85,6 +103,7 @@ export default function ConnectionsPage() {
     try {
       await createConnection({
         organization_id: orgId,
+        user_id: localStorage.getItem("argo_user_id") || "",
         name: form.name,
         db_type: form.db_type,
         host: form.host,

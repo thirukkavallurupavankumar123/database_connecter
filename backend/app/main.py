@@ -3,12 +3,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.database import engine
 from app.models.models import Base
-from app.api import organizations, connections, queries
+from app.api import organizations, connections, queries, auth
 
 settings = get_settings()
+print(f"[STARTUP] DATABASE_URL = {settings.DATABASE_URL}")
+print(f"[STARTUP] Engine URL = {engine.url}")
 
-# Create internal DB tables
-Base.metadata.create_all(bind=engine)
+# Create internal DB tables (auto-create for SQLite; use alembic migrate for PostgreSQL)
+if "sqlite" in settings.DATABASE_URL:
+    Base.metadata.create_all(bind=engine)
+else:
+    # For PostgreSQL, tables are managed by Alembic migrations.
+    # On first run or if DB is empty, auto-create as fallback.
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception:
+        pass  # DB not reachable yet — alembic will handle it
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -27,6 +37,7 @@ app.add_middleware(
 )
 
 # Register routers
+app.include_router(auth.router)
 app.include_router(organizations.router)
 app.include_router(connections.router)
 app.include_router(queries.router)

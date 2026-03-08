@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
     # Groq AI
     GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "llama-3.1-70b-versatile"
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
 
     # Encryption
     ENCRYPTION_KEY: str = ""  # 32-byte Fernet key, generate with: Fernet.generate_key()
@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     QUERY_TIMEOUT_SECONDS: int = 10
 
     # Internal DB (for storing tenant/connection metadata)
-    DATABASE_URL: str = "sqlite:///./argo.db"
+    DATABASE_URL: str = "postgresql://argo_user:argo_pass@localhost:5432/argo_db"
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 
