@@ -89,6 +89,16 @@ def run_query(payload: QueryRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(history)
 
+    # 3b. Keep only the latest 10 history records per user
+    MAX_HISTORY = 10
+    user_history = db.query(QueryHistory).filter(
+        QueryHistory.user_id == payload.user_id
+    ).order_by(QueryHistory.created_at.desc()).all()
+    if len(user_history) > MAX_HISTORY:
+        for old_record in user_history[MAX_HISTORY:]:
+            db.delete(old_record)
+        db.commit()
+
     try:
         # 4. AI Agent 1: Generate SQL
         sql = generate_sql(
@@ -209,4 +219,4 @@ def get_query_history(user_id: str, db: Session = Depends(get_db)):
 
     return db.query(QueryHistory).filter(
         QueryHistory.user_id == user_id
-    ).order_by(QueryHistory.created_at.desc()).limit(50).all()
+    ).order_by(QueryHistory.created_at.desc()).limit(10).all()
