@@ -4,7 +4,7 @@ import "./globals.css";
 import AppShell from "@/components/AppShell";
 
 export const metadata: Metadata = {
-  title: "ARGO Analytics — Enterprise GenAI Database Platform",
+  title: "SQLMind — Enterprise GenAI Database Platform",
   description:
     "AI-powered enterprise analytics platform. Connect databases, ask questions in natural language, get insights.",
 };

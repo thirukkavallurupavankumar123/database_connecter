@@ -110,7 +110,7 @@ export default function SetupPage() {
 
   return (
     <div className="max-w-xl mx-auto mt-8 space-y-6">
-      <h1 className="text-2xl font-bold text-center">Get Started with ARGO</h1>
+      <h1 className="text-2xl font-bold text-center">Get Started with SQLMind</h1>
       <p className="text-slate-400 text-center text-sm">
         Set up your organization and user profile in 2 steps.
       </p>

@@ -33,7 +33,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       {/* Sidebar */}
       <aside className="w-64 border-r border-slate-700 bg-[#1e293b] p-4 flex flex-col">
         <h1 className="text-xl font-bold text-blue-400 mb-6">
-          🚀 ARGO Analytics
+          🚀 SQLMind
         </h1>
 
         <div className="flex flex-col gap-1 flex-1">

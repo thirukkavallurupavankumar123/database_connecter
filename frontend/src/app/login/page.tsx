@@ -113,7 +113,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-6">
         {/* Logo */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-blue-400">🚀 ARGO Analytics</h1>
+          <h1 className="text-3xl font-bold text-blue-400">🚀 SQLMind</h1>
           <p className="text-sm text-slate-400 mt-2">
             Enterprise GenAI Database Analytics Platform
           </p>
