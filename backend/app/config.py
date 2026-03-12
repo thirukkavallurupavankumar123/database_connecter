@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
 
     # CORS
-    FRONTEND_URL: str = "http://localhost:3000"
+    FRONTEND_URL: str = ""
 
     # Groq AI
     GROQ_API_KEY: str = ""
@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     QUERY_TIMEOUT_SECONDS: int = 10
 
     # Internal DB (for storing tenant/connection metadata)
-    DATABASE_URL: str = "postgresql://argo_user:argo_pass@localhost:5432/argo_db"
+    DATABASE_URL: str = ""
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 
