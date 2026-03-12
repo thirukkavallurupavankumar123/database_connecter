@@ -1,5 +1,6 @@
 import os
 from pydantic_settings import BaseSettings
+from pydantic import model_validator
 from functools import lru_cache
 
 
@@ -27,6 +28,23 @@ class Settings(BaseSettings):
     DATABASE_URL: str = ""
 
     model_config = {"env_file": ".env", "extra": "ignore"}
+
+    @model_validator(mode="after")
+    def check_required_env_vars(self):
+        missing = []
+        if not self.DATABASE_URL:
+            missing.append("DATABASE_URL")
+        if not self.FRONTEND_URL:
+            missing.append("FRONTEND_URL")
+        if not self.GROQ_API_KEY:
+            missing.append("GROQ_API_KEY")
+        if not self.ENCRYPTION_KEY:
+            missing.append("ENCRYPTION_KEY")
+        if missing:
+            raise ValueError(
+                f"Missing required environment variables in .env: {', '.join(missing)}"
+            )
+        return self
 
 
 @lru_cache()
