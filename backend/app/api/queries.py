@@ -19,6 +19,7 @@ from app.services.data_processor import compute_statistics, detect_trends
 from app.services.report_generator import generate_csv, generate_excel, generate_json_report, generate_pdf
 from app.agents.query_agent import generate_sql
 from app.agents.analysis_agent import analyze_data
+from app.agents.router_agent import select_connection_with_agent
 
 router = APIRouter(prefix="/api/query", tags=["Query & Analysis"])
 
@@ -49,7 +50,15 @@ def connect_session(payload: ConnectRequest, db: Session = Depends(get_db)):
 
 
 def _select_connection_for_query(payload: QueryRequest, user: User, db: Session) -> DatabaseConnection:
-    """Auto-select a connection when none is provided using default + keyword routing."""
+     """Auto-select a connection when none is provided.
+
+     Priority:
+     1. Explicit connection_id from payload (validated).
+     2. If multiple connections and no id, use AI routing agent to pick the
+         best connection based on labels, tags, and organization context.
+     3. If the agent fails for any reason, fall back to simple keyword routing
+         with default connection preference.
+     """
     if payload.connection_id:
         conn = db.query(DatabaseConnection).filter(DatabaseConnection.id == payload.connection_id).first()
         if not conn:
@@ -69,10 +78,42 @@ def _select_connection_for_query(payload: QueryRequest, user: User, db: Session)
     if len(org_connections) == 1:
         return org_connections[0]
 
-    # Prefer explicit default
+    # Prefer explicit default (used by both AI router and fallback heuristic)
     default_conn = next((c for c in org_connections if c.is_default), None)
 
-    # Simple keyword routing: match query words against name/label/tags
+    # Try AI-based routing first for enterprise-grade selection
+    try:
+        org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+
+        connections_payload = [
+            {
+                "id": c.id,
+                "name": c.name,
+                "label": c.label,
+                "tags": c.tags,
+                "db_type": c.db_type,
+                "is_default": bool(c.is_default),
+            }
+            for c in org_connections
+        ]
+
+        router_result = select_connection_with_agent(
+            natural_language_query=payload.natural_language_query,
+            connections=connections_payload,
+            organization_name=org.name if org else None,
+            default_connection_id=default_conn.id if default_conn else None,
+        )
+
+        selected_id = router_result.get("connection_id")
+        if isinstance(selected_id, str):
+            selected = next((c for c in org_connections if c.id == selected_id), None)
+            if selected is not None:
+                return selected
+    except Exception:
+        # Fall back to heuristic routing below
+        pass
+
+    # Fallback: simple keyword routing matching query words against name/label/tags
     tokens = [t for t in payload.natural_language_query.lower().replace("\n", " ").split(" ") if t]
 
     def score(conn: DatabaseConnection) -> int:
