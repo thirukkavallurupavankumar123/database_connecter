@@ -7,6 +7,9 @@ import AuthGuard from "@/components/AuthGuard";
 
 type ConnectionFormState = {
   name: string;
+  label: string;
+  tags: string;
+  is_default: boolean;
   db_type: "postgresql" | "mysql" | "sqlserver";
   host: string;
   port: string;
@@ -19,6 +22,8 @@ type ConnectionFormState = {
 type SavedConnection = {
   id: string;
   name: string;
+  label?: string | null;
+  is_default?: boolean;
   db_type: string;
   host: string;
   port?: string | null;
@@ -42,6 +47,9 @@ export default function ConnectionsPage() {
 function ConnectionsContent() {
   const [form, setForm] = useState<ConnectionFormState>({
     name: "",
+    label: "",
+    tags: "",
+    is_default: false,
     db_type: "postgresql",
     host: "",
     port: "",
@@ -105,6 +113,9 @@ function ConnectionsContent() {
         organization_id: orgId,
         user_id: localStorage.getItem("argo_user_id") || "",
         name: form.name,
+        label: form.label || undefined,
+        tags: form.tags || undefined,
+        is_default: form.is_default,
         db_type: form.db_type,
         host: form.host,
         port: form.port || undefined,
@@ -173,6 +184,10 @@ function ConnectionsContent() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="Connection Name" name="name" value={form.name} onChange={handleChange} placeholder="My Production DB" />
 
+          <Field label="Label (for routing)" name="label" value={form.label} onChange={handleChange} placeholder="e.g. sales, support" />
+
+          <Field label="Tags (comma-separated)" name="tags" value={form.tags} onChange={handleChange} placeholder="orders, customers, finance" />
+
           <div>
             <label className="block text-sm text-slate-400 mb-1">Database Type</label>
             <select
@@ -202,6 +217,17 @@ function ConnectionsContent() {
               className="rounded"
             />
             <label className="text-sm text-slate-400">SSL Enabled</label>
+          </div>
+
+          <div className="flex items-center gap-2 mt-6">
+            <input
+              type="checkbox"
+              name="is_default"
+              checked={form.is_default}
+              onChange={handleChange}
+              className="rounded"
+            />
+            <label className="text-sm text-slate-400">Set as default for this org</label>
           </div>
         </div>
 
@@ -241,6 +267,12 @@ function ConnectionsContent() {
                 <p className="text-sm text-slate-400">
                   {conn.db_type} — {conn.host}:{conn.port}/{conn.database_name}
                 </p>
+                {conn.label && (
+                  <p className="text-xs text-slate-400">Label: {conn.label}</p>
+                )}
+                {conn.is_default && (
+                  <p className="text-xs text-green-400">Default connection</p>
+                )}
               </div>
               <button
                 onClick={() => handleDelete(conn.id)}

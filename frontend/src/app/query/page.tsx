@@ -10,6 +10,8 @@ import AuthGuard from "@/components/AuthGuard";
 type ConnectionOption = {
   id: string;
   name: string;
+  label?: string | null;
+  is_default?: boolean;
   db_type: string;
   host: string;
   database_name: string;
@@ -34,7 +36,8 @@ export default function QueryPage() {
 function QueryContent() {
   // Session state — persists across queries
   const [session, setSession] = useState<SessionInfo | null>(null);
-  const [selectedConnectionId, setSelectedConnectionId] = useState("");
+  const AUTO = "__auto__";
+  const [selectedConnectionId, setSelectedConnectionId] = useState(AUTO);
   const [connectLoading, setConnectLoading] = useState(false);
 
   // Auto-connect on mount using auth session
@@ -46,7 +49,8 @@ function QueryContent() {
         .then((res) => {
           setSession(res.data);
           if (res.data.connections.length > 0) {
-            setSelectedConnectionId(res.data.connections[0].id);
+            const defaultConn = res.data.connections.find((c: any) => c.is_default);
+            setSelectedConnectionId(defaultConn ? defaultConn.id : AUTO);
           }
         })
         .catch(() => {})
@@ -74,7 +78,8 @@ function QueryContent() {
       const res = await connectSession(userId);
       setSession(res.data);
       if (res.data.connections.length > 0) {
-        setSelectedConnectionId(res.data.connections[0].id);
+        const defaultConn = res.data.connections.find((c: any) => c.is_default);
+        setSelectedConnectionId(defaultConn ? defaultConn.id : AUTO);
       }
     } catch (err: any) {
       setConnectError(err.response?.data?.detail || "Failed to connect.");
@@ -91,8 +96,8 @@ function QueryContent() {
   };
 
   const handleQuery = async () => {
-    if (!session || !selectedConnectionId || !query.trim()) {
-      setError("Please select a connection and enter a query.");
+    if (!session || !query.trim()) {
+      setError("Please enter a query.");
       return;
     }
     setLoading(true);
@@ -100,7 +105,7 @@ function QueryContent() {
     setResult(null);
     try {
       const res = await runQuery({
-        connection_id: selectedConnectionId,
+        connection_id: selectedConnectionId === AUTO ? null : selectedConnectionId,
         user_id: session.user_id,
         natural_language_query: query.trim(),
       });
@@ -112,11 +117,11 @@ function QueryContent() {
   };
 
   const handleDownload = async (format: string) => {
-    if (!session || !selectedConnectionId || !query.trim()) return;
+    if (!session || !query.trim()) return;
     setDownloading(format);
     try {
       const res = await downloadReport({
-        connection_id: selectedConnectionId,
+        connection_id: selectedConnectionId === AUTO ? null : selectedConnectionId,
         user_id: session.user_id,
         natural_language_query: query.trim(),
         format,
@@ -213,6 +218,7 @@ function QueryContent() {
               onChange={(e) => setSelectedConnectionId(e.target.value)}
               className="flex-1 bg-[#334155] border border-slate-600 rounded-lg px-3 py-2 text-sm"
             >
+              <option value={AUTO}>Auto-select (let SQLMind route)</option>
               {session.connections.map((conn) => (
                 <option key={conn.id} value={conn.id}>
                   {conn.name} ({conn.db_type} — {conn.host}/{conn.database_name})
