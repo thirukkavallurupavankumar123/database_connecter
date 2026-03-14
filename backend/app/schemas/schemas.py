@@ -64,6 +64,9 @@ class DatabaseConnectionCreate(BaseModel):
     organization_id: str
     user_id: str
     name: str
+    label: Optional[str] = None
+    tags: Optional[str] = None  # comma-separated keywords
+    is_default: bool = False
     db_type: Literal["postgresql", "mysql", "sqlserver"]
     host: str
     port: Optional[str] = None
@@ -77,12 +80,15 @@ class DatabaseConnectionResponse(BaseModel):
     id: str
     organization_id: str
     name: str
+    label: Optional[str]
+    tags: Optional[str]
     db_type: str
     host: str
     port: Optional[str]
     database_name: str
     username: str
     ssl_enabled: bool
+    is_default: bool
     is_active: bool
     created_at: datetime
     last_used_at: Optional[datetime]
@@ -108,6 +114,8 @@ class ConnectRequest(BaseModel):
 class ConnectionInfo(BaseModel):
     id: str
     name: str
+    label: Optional[str]
+    is_default: Optional[bool] = False
     db_type: str
     host: str
     database_name: str
@@ -125,7 +133,7 @@ class ConnectResponse(BaseModel):
 
 # --- Query ---
 class QueryRequest(BaseModel):
-    connection_id: str
+    connection_id: Optional[str] = None
     user_id: str
     natural_language_query: str
 

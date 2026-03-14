@@ -67,9 +67,17 @@ def create_connection(payload: DatabaseConnectionCreate, db: Session = Depends(g
         raise HTTPException(status_code=400, detail=f"Cannot save — connection test failed: {err_msg}")
 
     encrypted_pw = encrypt_password(payload.password)
+    # If marking as default, unset previous defaults for this org
+    if payload.is_default:
+        db.query(DatabaseConnection).filter(
+            DatabaseConnection.organization_id == payload.organization_id
+        ).update({DatabaseConnection.is_default: False})
+
     conn = DatabaseConnection(
         organization_id=payload.organization_id,
         name=payload.name,
+        label=payload.label,
+        tags=payload.tags,
         db_type=payload.db_type,
         host=payload.host,
         port=payload.port,
@@ -77,6 +85,7 @@ def create_connection(payload: DatabaseConnectionCreate, db: Session = Depends(g
         username=payload.username,
         encrypted_password=encrypted_pw,
         ssl_enabled=payload.ssl_enabled,
+        is_default=payload.is_default,
     )
     db.add(conn)
     db.commit()

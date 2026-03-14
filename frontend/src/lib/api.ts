@@ -51,6 +51,9 @@ export const createConnection = (data: {
   organization_id: string;
   user_id: string;
   name: string;
+  label?: string;
+  tags?: string;
+  is_default?: boolean;
   db_type: string;
   host: string;
   port?: string;
@@ -80,14 +83,14 @@ export const connectSession = (userId: string) =>
   api.post("/api/query/connect", { user_id: userId });
 
 export const runQuery = (data: {
-  connection_id: string;
+  connection_id?: string | null;
   user_id: string;
   natural_language_query: string;
 }) => api.post("/api/query/", data);
 
 export const downloadReport = (
   data: {
-    connection_id: string;
+    connection_id?: string | null;
     user_id: string;
     natural_language_query: string;
     format: string;

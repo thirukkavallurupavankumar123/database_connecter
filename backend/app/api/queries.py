@@ -48,6 +48,63 @@ def connect_session(payload: ConnectRequest, db: Session = Depends(get_db)):
     )
 
 
+def _select_connection_for_query(payload: QueryRequest, user: User, db: Session) -> DatabaseConnection:
+    """Auto-select a connection when none is provided using default + keyword routing."""
+    if payload.connection_id:
+        conn = db.query(DatabaseConnection).filter(DatabaseConnection.id == payload.connection_id).first()
+        if not conn:
+            raise HTTPException(status_code=404, detail="Connection not found")
+        if conn.organization_id != user.organization_id:
+            raise HTTPException(status_code=403, detail="This user is not allowed to query the selected connection")
+        return conn
+
+    # No connection_id provided — auto route within the org
+    org_connections = db.query(DatabaseConnection).filter(
+        DatabaseConnection.organization_id == user.organization_id,
+        DatabaseConnection.is_active == True,
+    ).all()
+
+    if not org_connections:
+        raise HTTPException(status_code=400, detail="No active connections configured for this organization")
+    if len(org_connections) == 1:
+        return org_connections[0]
+
+    # Prefer explicit default
+    default_conn = next((c for c in org_connections if c.is_default), None)
+
+    # Simple keyword routing: match query words against name/label/tags
+    tokens = [t for t in payload.natural_language_query.lower().replace("\n", " ").split(" ") if t]
+
+    def score(conn: DatabaseConnection) -> int:
+        haystack = " ".join(filter(None, [conn.name, conn.label, conn.tags or ""]))
+        haystack = haystack.lower()
+        return sum(1 for t in tokens if t in haystack)
+
+    scored = sorted(
+        ((c, score(c)) for c in org_connections),
+        key=lambda item: item[1],
+        reverse=True,
+    )
+
+    top_conn, top_score = scored[0]
+    if top_score == 0:
+        if default_conn:
+            return default_conn
+        # Ambiguous: ask client to specify
+        options = [f"{c.name} ({c.db_type})" for c in org_connections]
+        raise HTTPException(
+            status_code=400,
+            detail=f"Multiple databases available. Please pick one: {', '.join(options)}",
+        )
+
+    # If tie at top and a default exists among them, prefer default
+    best_conns = [c for c, s in scored if s == top_score]
+    if default_conn and default_conn in best_conns:
+        return default_conn
+
+    return top_conn
+
+
 @router.post("/", response_model=QueryResponse)
 def run_query(payload: QueryRequest, db: Session = Depends(get_db)):
     """Full pipeline: NL query → SQL → execute → analyze → return results."""
@@ -55,18 +112,8 @@ def run_query(payload: QueryRequest, db: Session = Depends(get_db)):
     if not user or not user.is_active:
         raise HTTPException(status_code=404, detail="Active user not found")
 
-    # 1. Load connection
-    conn = db.query(DatabaseConnection).filter(
-        DatabaseConnection.id == payload.connection_id
-    ).first()
-    if not conn:
-        raise HTTPException(status_code=404, detail="Connection not found")
-
-    if conn.organization_id != user.organization_id:
-        raise HTTPException(
-            status_code=403,
-            detail="This user is not allowed to query the selected connection",
-        )
+    # 1. Select connection (explicit or auto-route)
+    conn = _select_connection_for_query(payload, user, db)
 
     # 2. Load schema context
     cache = db.query(SchemaCache).filter(

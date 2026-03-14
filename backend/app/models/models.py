@@ -39,6 +39,8 @@ class DatabaseConnection(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     organization_id = Column(String, ForeignKey("organizations.id"), nullable=False)
     name = Column(String(255), nullable=False)
+    label = Column(String(255), nullable=True)  # short label for routing (e.g., sales, support)
+    tags = Column(Text, nullable=True)  # comma-separated tags to help auto-routing
     db_type = Column(String(50), nullable=False)  # postgresql, mysql, sqlserver, snowflake, bigquery
     host = Column(String(255), nullable=False)
     port = Column(String(10), nullable=True)
@@ -46,6 +48,7 @@ class DatabaseConnection(Base):
     username = Column(String(255), nullable=False)
     encrypted_password = Column(Text, nullable=False)  # AES-encrypted
     ssl_enabled = Column(Boolean, default=True)
+    is_default = Column(Boolean, default=False)  # prefer this connection for the org
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_used_at = Column(DateTime, nullable=True)
